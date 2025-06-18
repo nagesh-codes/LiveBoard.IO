@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            position: fixed;
+        }
+
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: gray;
+            gap: 10px;
+        }
+
+
+        main {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            display: none;
+            gap: 20px;
+        }
+
+        canvas {
+            background-color: white;
+        }
+
+        button {
+            padding: 3px 5px;
+            border-radius: 20px;
+        }
+
+        .all {
+            display: none;
+        }
+
+        #entry {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #entry input,
+        .bt {
+            padding: 7px 10px;
+            border-radius: 10px;
+            outline: 0;
+            border: 2px solid rgb(214, 38, 146);
+            color: rgb(214, 38, 146);
+            font-weight: bolder;
+            background-color: azure;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .bt input {
+            border: 0;
+            outline: 0;
+        }
+
+        .lower-side .bt {
+            padding: 7px 0px;
+            width: 220px;
+            text-align: center;
+        }
+
+        #entry button {
+            background-color: red;
+            color: #fff;
+            border: 2px solid;
+        }
+
+        input::placeholder {
+            color: rgb(214, 38, 146);
+        }
+
+        #options {
+            position: absolute;
+            top: 20px;
+            right: 10px;
+            transform: translate(-50%, -50%);
+            font-weight: bolder;
+            font-size: 20;
+            z-index: 100;
+        }
+
+        .lower-side .bt {
+            background-color: #D8251B;
+            color: #fff;
+            border: 4px solid #fff;
+        }
+
+        .lower-side {
+            height: 100%;
+            width: 100%;
+            backdrop-filter: blur(10px);
+            background-color: rgba(128, 128, 128, 0.607);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .range {
+            display: flex;
+            flex-direction: column;
+
+        }
+
+        #member {
+            border: 0;
+            background-color: transparent;
+        }
+    </style>
+</head>
+
+<body>
+    <form id="entry">
+        <input type="text" placeholder="Enter Your Name" autofocus required>
+        <input type="number" placeholder="Enter The Room Id" pattern="{0-9}" min="0" required>
+        <button type="submit">Enter</button>
+    </form>
+    <main>
+        <canvas class="all" id="canvas"></canvas>
+        <button id="options">Menu <i class="fa-solid fa-bars"></i></button>
+        <div class="lower-side" id="option-panel">
+            <div class="bt all" id="member"></div>
+            <div class="bt">
+                Cursor Color :
+                <input type="color" id="color-cur">
+            </div>
+            <div class="bt">
+                Canvas Color :
+                <input type="color" id="color-can" value="#ffffff">
+            </div>
+            <div class="bt range">
+                <div>Select Cursor Size : <b id="sizeInfo">1</b></div>
+                <input type="range" id="size" min="1" max="99" value="1">
+            </div>
+            <div class="bt all" id="clear">clear canvas</div>
+            <div class="bt" onclick="location.reload();">Reload Page</d>
+            </div>
+    </main>
+</body>
+<script>
+    const socket = io();
+    const canvas = document.getElementById("canvas");
+    const form = document.getElementById("entry");
+    const member = document.getElementById("member");
+    const main = document.querySelector('main');
+    const option_panel = document.getElementById('option-panel');
+    const ctx = canvas.getContext('2d');
+    const colorElementCur = document.getElementById('color-cur')
+    const colorElementCan = document.getElementById('color-can')
+    const sizeInfo = document.getElementById("sizeInfo");
+    const sizeElement = document.getElementById('size');
+    let isMouseDown = false;
+    let name, room_ID;
+    let colorCur = '#000000';
+    let colorCan = '#ffffff';
+    let size = 1;
+    let drawing = false;
+    let lastX = 0, lastY = 0;
+
+    window.onload = () => {
+        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth;
+        document.querySelectorAll('.all').forEach((e) => {
+            e.style.display = 'block';
+        });
+    }
+
+    form.onsubmit = (e) => {
+        e.preventDefault();
+        const data = { name: e.target[0].value, roomID: e.target[1].value };
+        name = e.target[0].value.trim();
+        room_ID = e.target[1].value.trim();
+        socket.emit('join', data);
+    };
+
+    colorElementCan.onchange = (e) => {
+        colorCan = e.target.value;
+        canvas.style.backgroundColor = e.target.value;
+        const data = { colorCur, colorCan, size, roomID: room_ID };
+        socket.emit('themeChange', data);
+    }
+
+    colorElementCur.onchange = (e) => {
+        colorCur = e.target.value;
+        const data = { colorCur, colorCan, size, roomID: room_ID };
+        socket.emit('themeChange', data);
+    };
+
+    sizeElement.onchange = (e) => {
+        sizeInfo.textContent = size = e.target.value;
+        const data = { colorCur, colorCan, size, roomID: room_ID };
+        socket.emit('themeChange', data);
+    }
+
+    document.getElementById('options').onclick = () => {
+        if (option_panel.style.display !== 'flex') {
+            document.getElementById('options').innerHTML = `Menu <i class="fa-solid fa-xmark"></i>`;
+            option_panel.style.display = 'flex';
+        } else {
+            document.getElementById('options').innerHTML = `Menu <i class="fa-solid fa-bars"></i>`;
+            option_panel.style.display = 'none';
+        }
+    }
+
+    document.getElementById('clear').onclick = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const data = { name: name, roomID: room_ID };
+        socket.emit('clear', data);
+    }
+
+    canvas.onmousedown = (e) => {
+        isMouseDown = true;
+    }
+
+    canvas.ontouchstart = (e) => {
+        e.preventDefault();
+        isMouseDown = true;
+        let pos = getOffsetPosition(e.touches[0], canvas);
+        lastX = pos.x;
+        lastY = pos.y
+    }
+
+    canvas.onmousemove = (e) => {
+        const x = e.offsetX;
+        const y = e.offsetY;
+        if (isMouseDown) {
+            const data = { lastX, lastY, x, y, roomID: room_ID };
+            ctx.beginPath();
+            drawLine(lastX, lastY, x, y);
+            socket.emit('mouseMove', data);
+        }
+        lastX = x;
+        lastY = y;
+    }
+
+    document.ontouchmove = (e) => {
+        e.preventDefault();
+        let pos = getOffsetPosition(e.touches[0], canvas);
+        const x = pos.x;
+        const y = pos.y;
+        if (isMouseDown) {
+            let data = { lastX, lastY, x, y, roomID: room_ID };
+            drawLine(lastX, lastY, x, y);
+            socket.emit('mouseMove', data);
+        }
+        lastX = x;
+        lastY = y;
+    }
+
+    document.ontouchend = () => {
+        isMouseDown = false;
+    }
+
+    document.onmouseup = () => {
+        isMouseDown = false;
+    }
+
+    socket.on('userExist', (data) => {
+        alert(`This Username '${data.name}' is Already Present in room '${data.roomID}'. Change username or the roomID`);
+    });
+
+    socket.on('notExist', (data) => {
+        canvas.style.backgroundColor = colorElementCan.value = colorCan = data.can;
+        colorElementCur.value = colorCur = data.cur;
+        sizeElement.value = sizeInfo.textContent = size = data.size;
+        form.style.display = 'none';
+        main.style.display = 'flex';
+    })
+
+    socket.on('newMember', (data) => {
+        member.innerHTML = `Total User : ${data.count} , RoomId : ${room_ID}`;
+        alert(data.name + ' Joined.');
+    });
+
+    socket.on('roomCount', (data) => {
+        member.innerHTML = `Total User : ${data.count} , RoomId : ${room_ID}`;
+    })
+
+    socket.on('clearCanvas', (data) => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        alert(data.name + ' cleared the Canvas');
+    });
+
+    socket.on('mouseMove', (data) => {
+        drawLine(data.lastX, data.lastY, data.x, data.y);
+    });
+
+    socket.on('newTheme', (data) => {
+        canvas.style.backgroundColor = colorElementCan.value = colorCan = data.colorCan
+        colorElementCur.value = colorCur = data.colorCur;
+        sizeElement.value = sizeInfo.textContent = size = data.size;
+    })
+
+    function getOffsetPosition(touch, element) {
+        const rect = element.getBoundingClientRect();
+        return {
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top
+        };
+    }
+
+    function drawLine(x1, y1, x2, y2) {
+        ctx.beginPath();
+        ctx.lineWidth = size;
+        ctx.strokeStyle = colorCur;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+    }
+
+</script>
+
+</html>
