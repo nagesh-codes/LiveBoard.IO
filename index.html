@@ -101,11 +101,12 @@
         #options {
             position: absolute;
             top: 20px;
-            right: 10px;
+            right: 5px;
             transform: translate(-50%, -50%);
             font-weight: bolder;
             font-size: 20;
             z-index: 100;
+            cursor: pointer;
         }
 
         .lower-side .bt {
@@ -128,6 +129,7 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
+            cursor: default;
         }
 
         .range {
@@ -139,6 +141,10 @@
         #member {
             border: 0;
             background-color: transparent;
+        }
+
+        .btn {
+            cursor: pointer;
         }
     </style>
 </head>
@@ -153,21 +159,23 @@
         <canvas class="all" id="canvas"></canvas>
         <button id="options">Menu <i class="fa-solid fa-bars"></i></button>
         <div class="lower-side" id="option-panel">
-            <div class="bt all" id="member"></div>
-            <div class="bt">
-                Cursor Color :
-                <input type="color" id="color-cur">
-            </div>
-            <div class="bt">
-                Canvas Color :
-                <input type="color" id="color-can" value="#ffffff">
-            </div>
-            <div class="bt range">
-                <div>Select Cursor Size : <b id="sizeInfo">1</b></div>
-                <input type="range" id="size" min="1" max="99" value="1">
-            </div>
-            <div class="bt all" id="clear">clear canvas</div>
-            <div class="bt" onclick="location.reload();">Reload Page</d>
+            <div id="inner">
+                <div class="bt all" id="member"></div>
+                <div class="bt">
+                    Cursor Color :
+                    <input type="color" id="color-cur">
+                </div>
+                <div class="bt">
+                    Canvas Color :
+                    <input type="color" id="color-can" value="#ffffff">
+                </div>
+                <div class="bt range">
+                    <div>Select Cursor Size : <b id="sizeInfo">1</b></div>
+                    <input type="range" id="size" min="1" max="99" value="1">
+                </div>
+                <div class="bt all btn" id="clear">clear canvas</div>
+                <div class="bt btn" onclick="location.reload();">Reload Page</d>
+                </div>
             </div>
     </main>
 </body>
@@ -183,6 +191,7 @@
     const colorElementCan = document.getElementById('color-can')
     const sizeInfo = document.getElementById("sizeInfo");
     const sizeElement = document.getElementById('size');
+    const inner = document.getElementById('inner');
     let isMouseDown = false;
     let name, room_ID;
     let colorCur = '#000000';
@@ -236,9 +245,18 @@
         }
     }
 
+    document.getElementById('option-panel').onclick = (e) => {
+        if (!inner.contains(e.target)) {
+            document.getElementById('options').innerHTML = `Menu <i class="fa-solid fa-bars"></i>`;
+            option_panel.style.display = 'none';
+        }
+    }
+
     document.getElementById('clear').onclick = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const data = { name: name, roomID: room_ID };
+        document.getElementById('options').innerHTML = `Menu <i class="fa-solid fa-bars"></i>`;
+        option_panel.style.display = 'none';
         socket.emit('clear', data);
     }
 
@@ -340,7 +358,7 @@
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
         ctx.stroke();
-    }
+    };
 
 </script>
 

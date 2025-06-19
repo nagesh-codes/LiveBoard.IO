@@ -2,7 +2,6 @@ const express = require('express');
 const { Server } = require('socket.io');
 const http = require('http');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -31,37 +30,41 @@ io.on('connection', (socket) => {
     console.log('1 client connected');
 
     socket.on('join', (data) => {
-        USERS[socket.id] = { name: data.name, roomID: data.roomID };
-        let onMember = 0;
-        let exist = false;
-        if (data.roomID in ROOMS) {
-            if (isPresent(data)) {
-                io.to(socket.id).emit('userExist', data);
-                exist = true;
-            } else {
-                ROOMS[data.roomID].push(socket.id);
-            }
-        } else {
-            ROOMS[data.roomID] = [socket.id];
-            ROOM_INFO[data.roomID] = {
-                cur: '#000000',
-                can: '#ffffff',
-                size: 1,
-            };
-        };
-
-        if (!exist) {
-            const dt = { cur: ROOM_INFO[data.roomID].cur, can: ROOM_INFO[data.roomID].can, size: ROOM_INFO[data.roomID].size }
-            io.to(socket.id).emit('notExist', dt);
-            onMember = ROOMS[data.roomID].length;
-            ROOMS[data.roomID].forEach(id => {
-                const dt = { count: onMember, name: data.name };
-                if (id !== socket.id) {
-                    io.to(id).emit('newMember', dt);
+        try {
+            USERS[socket.id] = { name: data.name, roomID: data.roomID };
+            let onMember = 0;
+            let exist = false;
+            if (data.roomID in ROOMS) {
+                if (isPresent(data)) {
+                    io.to(socket.id).emit('userExist', data);
+                    exist = true;
                 } else {
-                    io.to(id).emit('roomCount', dt);
+                    ROOMS[data.roomID].push(socket.id);
+                }
+            } else {
+                ROOMS[data.roomID] = [socket.id];
+                ROOM_INFO[data.roomID] = {
+                    cur: '#000000',
+                    can: '#ffffff',
+                    size: 1,
                 };
-            });
+            };
+
+            if (!exist) {
+                const dt = { cur: ROOM_INFO[data.roomID].cur, can: ROOM_INFO[data.roomID].can, size: ROOM_INFO[data.roomID].size }
+                io.to(socket.id).emit('notExist', dt);
+                onMember = ROOMS[data.roomID].length;
+                ROOMS[data.roomID].forEach(id => {
+                    const dt = { count: onMember, name: data.name };
+                    if (id !== socket.id) {
+                        io.to(id).emit('newMember', dt);
+                    } else {
+                        io.to(id).emit('roomCount', dt);
+                    };
+                });
+            }
+        } catch (e) {
+            console.log(e);
         }
     });
 
@@ -74,7 +77,7 @@ io.on('connection', (socket) => {
             });
         } catch (e) {
             console.log(e);
-        }
+        };
     });
 
     socket.on('mouseMove', (data) => {
@@ -102,10 +105,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('themeChange', (data) => {
-        ROOM_INFO[data.roomID].cur = data.colorCur;
-        ROOM_INFO[data.roomID].can = data.colorCan;
-        ROOM_INFO[data.roomID].size = data.size;
         try {
+            ROOM_INFO[data.roomID].cur = data.colorCur;
+            ROOM_INFO[data.roomID].can = data.colorCan;
+            ROOM_INFO[data.roomID].size = data.size;
             ROOMS[data.roomID].forEach(id => {
                 if (socket.id !== id) {
                     io.to(id).emit('newTheme', data);
@@ -116,16 +119,21 @@ io.on('connection', (socket) => {
         }
     })
 
-    socket.on('disconnect', () => {
+    socket.on('disconnecting', () => {
         try {
             const roomID = USERS[socket.id].roomID;
             ROOMS[roomID] = ROOMS[roomID].filter(user => user !== socket.id);
-            delete USERS[socket.id];
-            onMember = ROOMS[roomID].length;
-            ROOMS[roomID].forEach(id => {
-                const dt = { count: onMember };
-                io.to(id).emit('roomCount', dt);
-            });
+            if (ROOMS[roomID].length === 0) {
+                delete ROOM_INFO[roomID];
+                delete USERS[socket.id];
+                delete ROOMS[roomID];
+            } else {
+                onMember = ROOMS[roomID].length;
+                ROOMS[roomID].forEach(id => {
+                    const dt = { count: onMember };
+                    io.to(id).emit('roomCount', dt);
+                });
+            }
             console.log('1 client disconnected');
         } catch (e) {
             console.log(e);
