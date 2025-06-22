@@ -277,7 +277,6 @@
         const y = e.offsetY;
         if (isMouseDown) {
             const data = { lastX, lastY, x, y, roomID: room_ID };
-            ctx.beginPath();
             drawLine(lastX, lastY, x, y);
             socket.emit('mouseMove', data);
         }
