@@ -12,6 +12,10 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'))
 })
 
+app.get('/ping', (req, res) => {
+    res.send("ok");
+})
+
 let USERS = {};
 let ROOMS = {};
 let ROOM_INFO = {};
