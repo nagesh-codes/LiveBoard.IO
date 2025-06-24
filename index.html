@@ -356,6 +356,8 @@
         ctx.strokeStyle = colorCur;
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
         ctx.stroke();
     };
 
