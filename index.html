@@ -229,6 +229,10 @@
         socket.emit('themeChange', data);
     };
 
+    sizeElement.oninput = (e) => {
+        sizeInfo.textContent = e.target.value;
+    }
+
     sizeElement.onchange = (e) => {
         sizeInfo.textContent = size = e.target.value;
         const data = { colorCur, colorCan, size, roomID: room_ID };
